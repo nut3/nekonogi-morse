@@ -1,0 +1,38 @@
+@media screen and (max-width: 640px)　{
+textarea{
+  width:100%;
+  height:6em;
+  padding:0;
+  margin:0;
+  border:1px solid red;
+  font-size:16px;
+}
+
+#DebugText{
+  height:30em;
+  display:none;
+}
+
+button{
+  width:100%;
+  height:4em;
+  padding:0;
+  margin:0;
+  border:1px solid blue;
+  font-size:16px;
+}
+  
+#HelpButton{
+  height:2em;
+}
+
+#TwitterButton{
+  width:100%;
+  height:2em;
+  display:block;
+  color:white;
+  background-color:RGB(29,161,242);
+  text-decoration:none;
+  text-align:center;
+}
+}
