@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>猫芒モールス(Nekonogi Morse)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scrollable=no">
+</head>
+<body>
+<style>
+textarea{
+  width:90%;
+  height:6em;
+  padding:0;
+  margin:0;
+  border:1px solid red;
+  font-size:16px;
+}
+
+#DebugText{
+  height:30em;
+  display:none;
+}
+
+button{
+  width:90%;
+  height:4em;
+  padding:0;
+  margin:0;
+  border:1px solid blue;
+  font-size:16px;
+}
+  
+#HelpButton{
+  height:2em;
+}
+
+#TwitterButton{
+  width:90%;
+  height:2em;
+  display:block;
+  color:white;
+  background-color:RGB(29,161,242);
+  text-decoration:none;
+  text-align:center;
+}
+</style>
+<h1>猫芒モールス(Nekonogi Morse)</h1>
+<div>
+<button id="HelpButton">?</button>
+</div>
+<ul id="HelpText" style="display:none">
+<li>
+平文に以下の文字のみ含む場合、英文モードになります。
+<ul>
+<li>A-Z</li>
+<li>a-z</li>
+<li>0-9</li>
+<li>. , : ? _ + * - ^ / @ ( ) " '
+</ul>
+</li>
+<li>他の文字を含む場合、和文モードになります。（日本語以外の文字含む）</li>
+<li>和文モードで変換できるのはひらがな、カタカナです。</li>
+<li>それ以外の文字はすべて単語区切りのスペースとして扱います。</li>
+</ul>
+</p>
+<div>
+<textarea id="PlainText"></textarea>
+</div>
+<div>
+<button id="PlayNekonogi">🔔猫芒🔔</button>
+</div>
+<div id="MorseText" style="font-family:monospace;">
+</div>
+<div>
+<textarea id="DebugText"></textarea>
+</div>
+<!--<a id="TwitterButton" href="https://twitter.com/share?ref_src=twsrc%5Etfw" class="twitter-share-button" data-size="large" data-url="https://nut3.github.io/nekonogi-morse/" data-show-count="false">Tweet</a>-->
+<a id="TwitterButton" href="http://twitter.com/share?url=https://nut3.github.io/nekonogi-morse/" target="_blank">Tweet</a>
+<script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<script>
+function getParam(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+
+const morseMapEN = new Map([
+   ['A','01'  ],['B','1000'],['C','1010'],['D','100' ],['E','0'   ]
+  ,['F','0010'],['G','110' ],['H','0000'],['I','00'  ],['J','0111']
+  ,['K','101' ],['L','0100'],['M','11'  ],['N','10'  ],['O','111' ]
+  ,['P','0110'],['Q','1101'],['R','010' ],['S','000' ],['T','1'   ]
+  ,['U','001' ],['V','0001'],['W','011' ],['X','1001'],['Y','1011']
+  ,['Z','1100']
+  
+  ,['a','01'  ],['b','1000'],['c','1010'],['d','100' ],['e','0'   ]
+  ,['f','0010'],['g','110' ],['h','0000'],['i','00'  ],['j','0111']
+  ,['k','101' ],['l','0100'],['m','11'  ],['n','10'  ],['o','111' ]
+  ,['p','0110'],['q','1101'],['r','010' ],['s','000' ],['t','1'   ]
+  ,['u','001' ],['v','0001'],['w','011' ],['x','1001'],['y','1011']
+  ,['z','1100']
+  
+  ,['1','01111' ],['2','00111' ],['3','00011' ],['4','00001' ],['5','00000' ]
+  ,['6','10000' ],['7','11000' ],['8','11100' ],['9','11110' ],['0','11111' ]
+  ,['.','010101'],[',','110011'],[':','111000'],['?','001100'],['_','001101']
+  ,['+','01010' ],['-','100001'],['*','1001'  ],['^','000000'],['/','10010' ]
+  ,['@','011010'],['(','10110' ],[')','101101'],['"','010010'],['\'','011110']
+]);
+
+function isEnglishText(plainText){
+  for(i = 0 ; i < plainText.length ; ++i){
+    const c = plainText[i];
+    if(c ==' ' || morseMapEN.has(c)){
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+const morseMapJA = new Map([
+   ['ア','11011'      ],['イ','01'         ],['ウ','001'        ],['エ','10111'      ],['オ','01000'      ]
+  ,['カ','0100'       ],['キ','10100'      ],['ク','0001'       ],['ケ','1011'       ],['コ','1111'       ]
+  ,['サ','10101'      ],['シ','11010'      ],['ス','11101'      ],['セ','01110'      ],['ソ','1110'       ]
+  ,['タ','10'         ],['チ','0010'       ],['ツ','0110'       ],['テ','01011'      ],['ト','00100'      ]
+  ,['ナ','010'        ],['ニ','1010'       ],['ヌ','0000'       ],['ネ','1101'       ],['ノ','0011'       ]
+  ,['ハ','1000'       ],['ヒ','11001'      ],['フ','1100'       ],['ヘ','0'          ],['ホ','100'        ]
+  ,['マ','1001'       ],['ミ','00101'      ],['ム','1'          ],['メ','10001'      ],['モ','10010'      ]
+  ,['ヤ','011'        ],['ユ','10011'      ],['ヨ','11'         ]
+  ,['ラ','000'        ],['リ','110'        ],['ル','10110'      ],['レ','111'        ],['ロ','0101'       ]
+  ,['ワ','101'        ],['ヲ','0111'       ],['ン','01010'      ]
+
+  ,['ァ','11011'      ],['ィ','01'         ],['ゥ','001'        ],['ェ','10111'      ],['ォ','01000'      ]
+  ,['ガ','0100 00'    ],['ギ','10100 00'   ],['グ','0001 00'    ],['ゲ','1011 00'    ],['ゴ','1111 00'    ]
+  ,['ザ','10101 00'   ],['ジ','11010 00'   ],['ズ','11101 00'   ],['ゼ','01110 00'   ],['ゾ','1110 00'    ]
+  ,['ダ','10 00'      ],['ヂ','0010 00'    ],['ヅ','0110 00'    ],['デ','01011 00'   ],['ド','00100 00'   ]
+  ,['ッ','0110'       ]
+  ,['バ','1000 00'    ],['ビ','11001 00'   ],['ブ','1100 00'    ],['ベ','0 00'       ],['ボ','100 00'     ]
+  ,['パ','1000 00110' ],['ピ','11001 00110'],['プ','1100 00110' ],['ペ','0 00110'    ],['ポ','100 00110'  ]
+  ,['ャ','011'        ],['ュ','10011'      ],['ョ','11']
+  ,['ヰ','01001'      ],['ヱ','01100'      ],['ヴ','001 00']
+
+  ,['あ','11011'      ],['い','01'         ],['う','001'        ],['え','10111'      ],['お','01000'      ]
+  ,['か','0100'       ],['き','10100'      ],['く','0001'       ],['け','1011'       ],['こ','1111'       ]
+  ,['さ','10101'      ],['し','11010'      ],['す','11101'      ],['せ','01110'      ],['そ','1110'       ]
+  ,['た','10'         ],['ち','0010'       ],['つ','0110'       ],['て','01011'      ],['と','00100'      ]
+  ,['な','010'        ],['に','1010'       ],['ぬ','0000'       ],['ね','1101'       ],['の','0011'       ]
+  ,['は','1000'       ],['ひ','11001'      ],['ふ','1100'       ],['へ','0'          ],['ほ','100'        ]
+  ,['ま','1001'       ],['み','00101'      ],['む','1'          ],['め','10001'      ],['も','10010'      ]
+  ,['や','011'        ],['ゆ','10011'      ],['よ','11'         ],['ら','000'        ],['り','110'        ]
+  ,['る','10110'      ],['れ','111'        ],['ろ','0101'       ],['わ','101'        ],['を','0111'       ]
+  ,['ん','01010'      ]
+
+  ,['ぁ','11011'      ],['ぃ','01'         ],['ぅ','001'        ],['ぇ','10111'      ],['ぉ','01000'      ]
+  ,['が','0100 00'    ],['ぎ','10100 00'   ],['ぐ','0001 00'    ],['げ','1011 00'    ],['ご','1111 00'    ]
+  ,['ざ','10101 00'   ],['じ','11010 00'   ],['ず','11101 00'   ],['ぜ','01110 00'   ],['ぞ','1110 00'    ]
+  ,['だ','10 00'      ],['ぢ','0010 00'    ],['づ','0110 00'    ],['で','01011 00'   ],['ど','00100 00'   ]
+  ,['っ','0110'       ]
+  ,['ば','1000 00'    ],['び','11001 00'   ],['ぶ','1100 00'    ],['べ','0 00'       ],['ぼ','100 00'     ]
+  ,['ぱ','1000 00110' ],['ぴ','11001 00110'],['ぷ','1100 00110' ],['ぺ','0 00110'    ],['ぽ','100 00110'  ]
+  ,['ゃ','011'        ],['ゅ','10011'      ],['ょ','11'         ]
+  
+  ,['゛','00'         ],['゜','00110'      ],['ー','01101'      ],['、','010101'     ],['（','101101'     ]
+  ,['）','010010'     ]
+]);
+
+const nekonogiTonLength = 4;
+const nekonogiTsuLength = 4;
+
+function toMorseText(plainText){
+  var result="";
+  var plainTextModeJA = !isEnglishText(plainText);
+  var modeJA = plainTextModeJA;
+  
+  
+  for (var i = 0 ; i < plainText.length ; ++i){
+    var c = plainText[i];
+    var m = '';
+    if(morseMapEN.has(c)){
+      //欧文モールス変換
+      if(modeJA){
+        m = '101101 ';
+        modeJA = false;
+      }
+      m += morseMapEN.get(c);
+    }else if(morseMapJA.has(c)){
+      //和文モールス変換
+      if(!modeJA){
+        m = '010010 ';
+        modeJA = true;
+      }
+      m += morseMapJA.get(c);
+    }else{
+     //その他の文字の場合、単語区切りのスペースとみなす
+     m = '     ';
+    }
+    result += m.replace(/0/g,'・').replace(/1/g,'‐') + ' ';
+  }
+  
+  //和文に対して英文モードで終わった場合は終了の'）'を付記する。
+  if(!modeJA && plainTextModeJA){
+    result += '010010 '.replace(/0/g,'・').replace(/1/g,'‐');
+  }
+  
+  result = result.replace(/\s/g,'□');
+  
+  return result.length > 0 ? result.substring(0,result.length-1) : "";
+};
+
+/*長点1つは短点3つ分の長さに相当し、各点の間は短点1つ分の間隔をあける。
+また、文字間隔は短点3つ分、語間隔は短点7つ分あけて区別する。*/
+
+function playNekonogi(morseCode){
+  var v = [];
+  for (let i = 0 ; i < morseCode.length ; ++i){
+    var c = morseCode[i];
+    if(c == '・'){
+      var no = parseInt(Math.random()*nekonogiTonLength,10);
+      v.push(new Audio("./ton"+no+".mp3"));
+    }else if(c == '‐'){
+      var no = parseInt(Math.random()*nekonogiTsuLength,10);
+      v.push(new Audio("./tsu"+no+".mp3"));
+    }else{
+      v.push(new Audio("./nosound.mp3"));
+    }
+    
+    if(i > 0){
+      v[i-1].addEventListener("ended", function(e){
+        v[i].play();
+        document.getElementById("M" + i).style.color = 'red';
+      });
+    }
+  }
+  if(v.length > 0){
+    v.push(new Audio("./dayo.mp3"));
+    v[v.length-2].addEventListener("ended", function(e){
+      v[v.length-1].play();
+      v[v.length-1].addEventListener("ended", function(e){
+        document.getElementById("PlayNekonogi").disabled = false;
+        var mi = document.getElementsByName("Mi");
+        mi.forEach(function(o){o.style.color = 'black';});
+      });
+    });
+    v[0].play();
+    document.getElementById("M0").style.color = 'red';
+    document.getElementById("PlayNekonogi").disabled = true;
+  }
+};
+
+function taggedMorseText(morseCode){
+  var result = "";
+  for(var i = 0 ; i < morseCode.length ; ++i){
+    result += "<span id='M" + i +"' class='Mi'>" + morseCode[i] + "</span>"
+  }
+  return result;
+}
+
+document.getElementById("PlayNekonogi").onclick = function() {
+  var plainText = document.getElementById("PlainText").value;
+  var morseText = toMorseText(plainText);
+  document.getElementById("MorseText").innerHTML = taggedMorseText(morseText);
+  playNekonogi(morseText);
+  var shareURI = encodeURI(window.location.href.split(/[?#]/)[0] + "?t=" + plainText);
+  document.getElementById("TwitterButton").href = "http://twitter.com/share?url=" + encodeURIComponent(shareURI) + "&text=猫芒モールス(Nekonogi Morse)";
+};
+
+document.getElementById("HelpButton").onclick = function() {
+  if(document.getElementById("HelpText").style.display == "none") {
+    document.getElementById("HelpText").style.display = "block";
+  }else{
+    document.getElementById("HelpText").style.display = "none";
+  }
+}  
+  
+window.onload = function(){
+  var paramT = getParam('t');
+  if(paramT){
+    document.getElementById("PlainText").value = paramT;
+    document.getElementById("MorseText").value = toMorseText(paramT);
+  }
+  //if(getParam('p')){
+  //  playNekonogi(document.getElementById("MorseText").value);
+  //}
+}
+
+</script>
+</body>
+</html>
